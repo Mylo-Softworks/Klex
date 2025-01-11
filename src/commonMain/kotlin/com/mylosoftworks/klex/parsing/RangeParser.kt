@@ -1,8 +1,14 @@
 package com.mylosoftworks.klex.parsing
 
+/**
+ * Object used to parse ranges.
+ */
 object RangeParser {
     private val cache: HashMap<String, Array<CharRange>> = hashMapOf()
 
+    /**
+     * Check if a character matches a range.
+     */
     fun matchesRange(char: Char, rangeDef: String): Boolean {
         val ranges = cache.getOrPut(rangeDef) { createRange(rangeDef) }
         return ranges.any {

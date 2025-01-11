@@ -68,7 +68,9 @@ class KlexContext<T>(var remainder: String, val block: KlexContext<T>.() -> Unit
     }
 
     /**
-     * Like
+     * Like [group]
+     *
+     * `group(false, block)`
      */
     fun check(block: KlexContext<T>.() -> Unit): Result<KlexTree<T>> = group(false, block)
 
@@ -96,7 +98,7 @@ class KlexContext<T>(var remainder: String, val block: KlexContext<T>.() -> Unit
     data class RepeatResult<T>(val count: Int, val subTrees: List<KlexTree<T>>)
 
     /**
-     * Repeat n times
+     * Repeat n times, based on [Repeat]
      */
     fun repeat(times: Repeat, block: KlexContext<T>.() -> Unit): Result<RepeatResult<T>> {
         if (error != null) return Result.failure(error!!)
