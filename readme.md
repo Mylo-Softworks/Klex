@@ -1,3 +1,5 @@
+[![](https://www.jitpack.io/v/Mylo-Softworks/Klex.svg)](https://www.jitpack.io/#Mylo-Softworks/Klex)
+
 # Klex
 A flexible lexer written in kotlin. Everything you'll need to go from a source file to an [abstract syntax tree](https://en.wikipedia.org/wiki/Abstract_syntax_tree).
 
