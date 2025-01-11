@@ -12,13 +12,13 @@ class KlexTests {
             AnyCount {
                 oneOf({
                     +" One"
-                    treeItem = "Number1"
+                    treeValue = "Number1"
                 }, {
                     +" Two"
-                    treeItem = "Number2"
+                    treeValue = "Number2"
                 })
             }
-            treeItem = "This is a test"
+            treeValue = "This is a test"
         }
 
         val result = parser.parse("Parse me! One Two One One One Two Two").getOrThrow().flattenNullValues()[0]
@@ -47,16 +47,16 @@ class KlexTests {
             AnyCount {
                 group(false) {
                     +"Try matching this"
-                    treeItem = "Match"
+                    treeValue = "Match"
                 }.runIfError {
                     // Something went wrong
                     group {
                         +"Alternative"
-                        treeItem = "Alt"
+                        treeValue = "Alt"
                     }
                 }
             }
-            treeItem = "Root"
+            treeValue = "Root"
         }
 
         assertNotNull(parser.parse("Try matching this").getOrThrow().find { it.value == "Match" })
@@ -70,13 +70,13 @@ class KlexTests {
             AnyCount {
                 oneOf({
                     +" One"
-                    treeItem = "Number1"
+                    treeValue = "Number1"
                 }, {
                     +" Two"
-                    treeItem = "Number2"
+                    treeValue = "Number2"
                 })
             }
-            treeItem = "This is a test"
+            treeValue = "This is a test"
         }
 
         val result = parser.parse("Parse me! One Two One One One Two Two").getOrThrow().flattenNullValues()[0]

@@ -8,17 +8,23 @@ package com.mylosoftworks.klex.parsing
  */
 data class KlexTree<T>(val strContent: String, val value: T?, var children: List<KlexTree<T>>) {
     /**
-     * Use this function to finalize
+     * Use this function to convert to your custom tree structure
      */
     fun <Tree> convert(transform: (strContent: String, value: T?, children: List<Tree>) -> Tree): Tree {
         return transform(strContent, value, children.map { it.convert(transform) })
     }
 
+    /**
+     * Use this function to remove all tree elements without a value, and merge them upwards
+     */
     fun flattenNullValues(): List<KlexTree<T>> {
         val newChildren = children.flatMap { it.flattenNullValues() }
         return if (value == null) newChildren else listOf(KlexTree(strContent, value, newChildren))
     }
 
+    /**
+     * Find the first tree item which matches the predicate, or null if no match was found.
+     */
     fun find(includeSelf: Boolean = false, deep: Boolean = true, predicate: (KlexTree<T>) -> Boolean): KlexTree<T>? {
         if (includeSelf && predicate(this)) return this
 
@@ -33,6 +39,9 @@ data class KlexTree<T>(val strContent: String, val value: T?, var children: List
         return null
     }
 
+    /**
+     * Find all tree items which match the predicate.
+     */
     fun findAll(includeSelf: Boolean = false, deep: Boolean = true, predicate: (KlexTree<T>) -> Boolean): List<KlexTree<T>> {
         val list = mutableListOf<KlexTree<T>>()
 

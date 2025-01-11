@@ -35,7 +35,7 @@ class KlexContext<T>(var remainder: String, val block: KlexContext<T>.() -> Unit
     // Sub items, used for constructing the tree at the end of parsing
     val treeSubItems = mutableListOf<KlexTree<T>>()
 
-    var treeItem: T? = null
+    var treeValue: T? = null
 
     fun parse(): Result<Pair<KlexTree<T>, String>> {
         block()
@@ -43,7 +43,7 @@ class KlexContext<T>(var remainder: String, val block: KlexContext<T>.() -> Unit
         return Result.success(
             KlexTree(
             treeSubItems.joinToString("") { it.strContent },
-            treeItem,
+            treeValue,
             treeSubItems
         ) to remainder)
     }
