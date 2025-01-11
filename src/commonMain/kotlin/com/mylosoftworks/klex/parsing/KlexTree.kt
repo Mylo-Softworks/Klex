@@ -6,7 +6,7 @@ package com.mylosoftworks.klex.parsing
  *
  * @param T The type to convert to when converting.
  */
-class KlexTree<T>(val strContent: String, val value: T?, var children: List<KlexTree<T>>) {
+data class KlexTree<T>(val strContent: String, val value: T?, var children: List<KlexTree<T>>) {
     /**
      * Use this function to finalize
      */
@@ -15,7 +15,39 @@ class KlexTree<T>(val strContent: String, val value: T?, var children: List<Klex
     }
 
     fun flattenNullValues(): List<KlexTree<T>> {
-        children = children.flatMap { it.flattenNullValues() }
-        return if (value == null) children else listOf(this)
+        val newChildren = children.flatMap { it.flattenNullValues() }
+        return if (value == null) newChildren else listOf(KlexTree(strContent, value, newChildren))
+    }
+
+    fun find(includeSelf: Boolean = false, deep: Boolean = true, predicate: (KlexTree<T>) -> Boolean): KlexTree<T>? {
+        if (includeSelf && predicate(this)) return this
+
+        if (!deep) {
+            return children.find(predicate)
+        }
+
+        children.forEach {
+            val result = it.find(true, true, predicate)
+            if (result != null) return result
+        }
+        return null
+    }
+
+    fun findAll(includeSelf: Boolean = false, deep: Boolean = true, predicate: (KlexTree<T>) -> Boolean): List<KlexTree<T>> {
+        val list = mutableListOf<KlexTree<T>>()
+
+        if (includeSelf && predicate(this)) list.add(this)
+
+        if (!deep) {
+            list.addAll(children.filter(predicate))
+            return list
+        }
+
+        children.forEach {
+            val results = it.findAll(true, true, predicate)
+            list.addAll(results)
+        }
+
+        return list
     }
 }

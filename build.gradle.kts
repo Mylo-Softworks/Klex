@@ -28,4 +28,8 @@ dependencies {
 
 kotlin {
     jvm()
+    js {
+        browser()
+        nodejs()
+    }
 }
