@@ -5,6 +5,8 @@ import com.mylosoftworks.klex.exceptions.NotDoneParsingError
 import com.mylosoftworks.klex.exceptions.NotEnoughMatchesError
 import com.mylosoftworks.klex.parsing.KlexTree
 import com.mylosoftworks.klex.parsing.RangeParser
+import kotlin.jvm.JvmName
+import kotlin.reflect.KProperty
 
 /**
  * The main utility for creating a Klex parser.
@@ -177,5 +179,42 @@ class KlexContext<T>(var remainder: String, val block: KlexContext<T>.() -> Unit
     fun <R> Result<R>.runIfError(block: () -> Unit): Result<R> {
         if (isFailure) block()
         return this
+    }
+
+    // Placeholder + Define
+    class KlexPlaceholderVal<T, V>(val propagateError: Boolean, val value: (KlexContext<T>.(V) -> Unit))
+    class KlexPlaceholder<T, V> {
+        operator fun getValue(t: Any?, property: KProperty<*>): KlexPlaceholderVal<T, V> {
+            return value
+        }
+
+        operator fun setValue(t: Any?, property: KProperty<*>, klexPlaceholderVal: KlexPlaceholderVal<T, V>) {
+            value = klexPlaceholderVal
+        }
+
+        lateinit var value: KlexPlaceholderVal<T, V>
+    }
+
+    // First: parameterless version
+    // Second: parameter version
+
+    fun placeholder() = KlexPlaceholder<T, Unit>()
+    @JvmName("placeholderV")
+    fun <V> placeholder() = KlexPlaceholder<T, V>()
+
+    fun define(propagateError: Boolean = true, block: (KlexContext<T>.(Unit) -> Unit)) = KlexPlaceholderVal(propagateError, block)
+    @JvmName("defineV")
+    fun <V> define(propagateError: Boolean = true, block: (KlexContext<T>.(V) -> Unit)) = KlexPlaceholderVal(propagateError, block)
+
+    operator fun KlexPlaceholderVal<T, Unit>.invoke(): Result<KlexTree<T>> = this.invoke(Unit) // Call regular version
+    operator fun <V> KlexPlaceholderVal<T, V>.invoke(given: V): Result<KlexTree<T>> {
+        if (this@KlexContext.error != null) return Result.failure(this@KlexContext.error!!)
+
+        val (tree, end) = KlexContext(remainder) { value(given) }.parse().getOrElse {
+            if (propagateError) error = it // Propagates the error from block to this
+            return Result.failure(it) }
+        remainder = end
+        treeSubItems.add(tree)
+        return Result.success(tree)
     }
 }

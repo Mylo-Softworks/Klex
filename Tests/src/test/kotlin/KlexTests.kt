@@ -1,5 +1,7 @@
 import com.mylosoftworks.klex.AnyCount
 import com.mylosoftworks.klex.Klex
+import com.mylosoftworks.klex.Optional
+import org.junit.jupiter.api.assertDoesNotThrow
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -82,5 +84,35 @@ class KlexTests {
         val result = parser.parse("Parse me! One Two One One One Two Two").getOrThrow().flattenNullValues()[0]
         val converted = "[" + result.convert { strContent, value, children -> value + children.joinToString(", ", "[", "]") } + "]"
         assertEquals(converted, "[This is a test[Number1[], Number2[], Number1[], Number1[], Number1[], Number2[], Number2[]]]")
+    }
+
+    @Test
+    fun testPlaceholder() {
+        val klex = Klex<Unit> {
+            var test by placeholder()
+            var test2 by placeholder<String>()
+
+            test = define {
+                +"test "
+
+                Optional {
+                    test2("test2") // <-- Used before finished defining
+                }
+            }
+
+            test2 = define<String> {
+                +"$it "
+
+                Optional {
+                    test()
+                }
+            }
+
+            test()
+        }
+
+        assertDoesNotThrow {
+            klex.parse("test test2 test ").getOrThrow()
+        }
     }
 }

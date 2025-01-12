@@ -24,6 +24,7 @@ The KlexContext object is used with your rules, unlike in [GBNF-Kotlin](https://
 
 Useful fields to know about:
 * `treeValue` - A value of type T? (given when creating Klex<T> object) used to store value for the current tree item.
+* `remainder` (Handled automatically) - A string containing the remaining text that is yet to be parsed
 * `error` (Handled automatically) - Stores an error if something went wrong, propagated up from groups unless the group has propagateError set to false.
 * `treeSubItems` (Handled automatically) - The children for the generated tree.
 
@@ -72,6 +73,64 @@ val matchCount = repeat(UpTo(5)) { // Repeats up to 5 times
 val matchCount = UpTo(5) {
     
 }.getOrElse { return@Klex }.count
+```
+
+Placeholder/Define:  
+`placeholder` and `define` are used to make a variable ready for referencing, and later defining it like a normal group. This can act as a replacement for recursive functions, note that it is effectively still recursive.  
+There are a few things to keep in mind:
+* Calling a placeholder before it is defined will throw an error.
+* A `placeholder` **can** be called from it's own code block, for direct recursion.
+* A `placeholder` **can** be called from another placeholder, defined in advance.
+* Placeholders are just intended to expand access to variables, equivalent to `lateinit var ph: KlexPlaceholderVal<T, V>`.
+* `define` can be used directly, even without a placeholder. `val rule = define {}`
+* `define`'s return value can be called with the same parameters as `group` but is defined in advance to be called later, depending on context as of the call.
+* Both `placeholder` and `define` have an optional type parameter, which represents a given value, in case of dynamic contexts.
+```kotlin
+// Prepare a placeholder.
+var ph by placeholder()
+// Prepare a placeholder which will take a String parameter.
+var ph2 by placeholder<String>()
+
+// Define a placeholder.
+ph = define {
+    +"placeholder" // Check for "placeholder"
+}
+
+// Define a placeholder which takes a String parameter.
+ph2 = define<String> {
+    +it // Check for it, whatever the value may be
+}
+
+/*
+    Placeholders can recursively invoke eachother
+    Example: chaining a + b (if you need this in practice, I suggest using repeat instead.
+    Placeholders are only required if you need to have recursive rules, functions can also do the same thing.)
+ */
+var a by placeholder()
+var b by placeholder()
+a = define {
+    +"a"
+    Optional {b()}
+}
+b = define {
+    +"b"
+    Optional {a()}
+}
+a() // Start with "a"
+
+// If you want the captured tree, you can do this
+val result = a().getOrThrow()
+val capturedText = result.strContent // ababab..
+
+// If you want to just use define, without a placeholder.
+val defined = define {
+    // Rules go here
+}
+val definedWithParam = define<String> {
+    // Rules go here, $it is the given string
+}
+defined()
+definedWithParam("Example")
 ```
 
 ### Content
