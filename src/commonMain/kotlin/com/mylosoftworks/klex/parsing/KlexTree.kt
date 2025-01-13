@@ -6,7 +6,7 @@ package com.mylosoftworks.klex.parsing
  *
  * @param T The type to convert to when converting.
  */
-data class KlexTree<T>(val strContent: String, val value: T?, var children: List<KlexTree<T>>) {
+class KlexTree<T>(val strContent: String, val value: T?, var children: List<KlexTree<T>>) {
     /**
      * Use this function to convert to your custom tree structure
      */
@@ -59,4 +59,20 @@ data class KlexTree<T>(val strContent: String, val value: T?, var children: List
 
         return list
     }
+
+    override fun toString(): String {
+        return "KlexTree(strContent='$strContent', value=$value, children=$children)"
+    }
+
+    operator fun get(index: Int) = children[index]
+    operator fun component1() = get(0)
+    operator fun component2() = get(1)
+    operator fun component3() = get(2)
+    operator fun component4() = get(3)
+    operator fun component5() = get(4)
+    operator fun component6() = get(5)
+    operator fun component7() = get(6)
+    operator fun component8() = get(7)
+    operator fun component9() = get(8)
+    operator fun component10() = get(9)
 }
