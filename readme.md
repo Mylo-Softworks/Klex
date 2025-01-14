@@ -3,7 +3,7 @@
 # Klex
 A flexible lexer written in kotlin. Everything you'll need to go from a source file to an [abstract syntax tree](https://en.wikipedia.org/wiki/Abstract_syntax_tree).
 
-Practical examples (json parser, programming language parser) coming soon.
+[Practical examples](examples.md)
 
 # Usage
 Usage of Klex is practically 2 steps, writing definitions and running them.

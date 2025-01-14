@@ -4,3 +4,4 @@ plugins {
 rootProject.name = "Klex"
 include("Tests")
 include("Tests")
+include("Examples")

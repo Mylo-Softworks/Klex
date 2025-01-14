@@ -1,8 +1,6 @@
 package com.mylosoftworks.klex
 
-import com.mylosoftworks.klex.exceptions.NoMatchError
-import com.mylosoftworks.klex.exceptions.NotDoneParsingError
-import com.mylosoftworks.klex.exceptions.NotEnoughMatchesError
+import com.mylosoftworks.klex.exceptions.*
 import com.mylosoftworks.klex.parsing.KlexTree
 import com.mylosoftworks.klex.parsing.RangeParser
 import kotlin.jvm.JvmName
@@ -77,6 +75,13 @@ class KlexContext<T>(var remainder: String, val block: KlexContext<T>.() -> Unit
     fun check(block: KlexContext<T>.() -> Unit): Result<KlexTree<T>> = group(false, block)
 
     /**
+     * Marks this scope as having failed manually
+     */
+    fun fail(message: String? = null) {
+        error = ManualFailError(message)
+    }
+
+    /**
      * Discards all blocks which fail to parse until it finds one which does parse.
      */
     fun oneOf(vararg blocks: KlexContext<T>.() -> Unit): Result<KlexTree<T>> {
@@ -96,6 +101,30 @@ class KlexContext<T>(var remainder: String, val block: KlexContext<T>.() -> Unit
         error = NoMatchError("Could not find a match.")
         return Result.failure(error!!)
     }
+
+    /**
+     * Discards all defined groups which fail to parse until it finds one which does parse.
+     */
+    fun <U> oneOf(given: U, vararg groups: KlexPlaceholderVal<T, U>): Result<KlexTree<T>> {
+        if (error != null) return Result.failure(error!!)
+
+        // Items are allowed to fail, but if all fail, this item fails.
+
+        for (group in groups) {
+            val result = group(given, false) // Run the group and override propagateError to false
+            if (result.isFailure) continue
+            val (tree, end) = result.getOrThrow() // Already validated that this result is valid, if it's somehow still a failure, something went seriously wrong, so throw
+            return Result.success(tree)
+        }
+
+        error = NoMatchError("Could not find a match.")
+        return Result.failure(error!!)
+    }
+
+    /**
+     * Discards all defined groups which fail to parse until it finds one which does parse.
+     */
+    fun oneOf(vararg groups: KlexPlaceholderVal<T, Unit>): Result<KlexTree<T>> = oneOf(Unit, *groups)
 
     data class RepeatResult<T>(val count: Int, val subTrees: List<KlexTree<T>>)
 
@@ -146,6 +175,10 @@ class KlexContext<T>(var remainder: String, val block: KlexContext<T>.() -> Unit
 
     fun range(range: String, negate: Boolean = false): Result<KlexTree<T>> {
         if (error != null) return Result.failure(error!!)
+        if (remainder.isEmpty()) {
+            error = NoTextLeftError("No text left to parse with this range.")
+            return Result.failure(error!!)
+        }
 
         val char = remainder[0]
 
@@ -171,7 +204,7 @@ class KlexContext<T>(var remainder: String, val block: KlexContext<T>.() -> Unit
     // Content rules
     operator fun String.unaryPlus() = literal(this)
     operator fun String.unaryMinus() = range(this)
-    operator fun String.not() = this to false
+    operator fun String.not() = this to true
     operator fun Pair<String, Boolean>.not() = this.first to !this.second
     operator fun Pair<String, Boolean>.unaryMinus() = range(this.first, this.second)
 
@@ -206,15 +239,18 @@ class KlexContext<T>(var remainder: String, val block: KlexContext<T>.() -> Unit
     @JvmName("defineV")
     fun <V> define(propagateError: Boolean = true, block: (KlexContext<T>.(V) -> Unit)) = KlexPlaceholderVal(propagateError, block)
 
-    operator fun KlexPlaceholderVal<T, Unit>.invoke(): Result<KlexTree<T>> = this.invoke(Unit) // Call regular version
-    operator fun <V> KlexPlaceholderVal<T, V>.invoke(given: V): Result<KlexTree<T>> {
+    operator fun KlexPlaceholderVal<T, Unit>.invoke(overridePropagateError: Boolean? = null): Result<Pair<KlexTree<T>, String>> = this.invoke(Unit, overridePropagateError) // Call regular version
+    operator fun <V> KlexPlaceholderVal<T, V>.invoke(given: V, overridePropagateError: Boolean? = null): Result<Pair<KlexTree<T>, String>> {
         if (this@KlexContext.error != null) return Result.failure(this@KlexContext.error!!)
 
+        val usedPGError = overridePropagateError ?: propagateError
+
         val (tree, end) = KlexContext(remainder) { value(given) }.parse().getOrElse {
-            if (propagateError) error = it // Propagates the error from block to this
+            if (usedPGError) error = it // Propagates the error from block to this
             return Result.failure(it) }
+
         remainder = end
         treeSubItems.add(tree)
-        return Result.success(tree)
+        return Result.success(tree to remainder)
     }
 }
