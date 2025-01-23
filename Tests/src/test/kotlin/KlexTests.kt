@@ -115,4 +115,72 @@ class KlexTests {
             klex.parse("test test2 test ").getOrThrow()
         }
     }
+
+    @Test
+    fun testFindByIndex() {
+        val klex = Klex.create<Boolean> {
+            +"I want the index of "
+            group {
+                +"this segment"
+                treeValue = true
+            }
+            +"!"
+            treeValue = false
+        }
+        val result = klex.parse("I want the index of this segment!").getOrThrow().flattenNullValues()[0]
+        // KlexTree(start=0, end=33, strContent='I want the index of this segment!', value=false, children=[KlexTree(start=20, end=32, strContent='this segment', value=true, children=[])])
+        assert(result.findByIndex(20)?.value ?: false) // Anywhere from 20 until 32 should work
+    }
+
+    @Test
+    fun testTokenize() {
+        abstract class TokenExample(val content: String) // Base class
+        class AToken(content: String): TokenExample(content)
+        class BToken(content: String): TokenExample(content)
+        val klexTokenizer = Klex.create<TokenExample> {
+            val whiteSpace = define { -" \n\t" }
+            val aToken = define {
+                val content = group {
+                    +"a"
+                    AnyCount {
+                        -"a-zA-Z0-9"
+                    }
+                }.getOrElse { return@define }.content
+                treeValue = AToken(content)
+            }
+            val bToken = define {
+                val content = group {
+                    +"b"
+                    AnyCount {
+                        -"a-zA-Z0-9"
+                    }
+                }.getOrElse { return@define }.content
+                treeValue = BToken(content)
+            }
+
+            AnyCount {
+                Optional { whiteSpace() }
+                oneOf(aToken, bToken)
+                Optional { whiteSpace() }
+            }
+        }
+        val tokensTree = klexTokenizer.parse("atoken btoken anythingStartingWithAIsAnAToken bAndAnythingStartingWithABIsABToken").getOrThrow().flattenNullValues() // Should be a flat tree now
+        val tokensList = tokensTree.map { it.value!! }
+        val klexParser = Klex.create<Unit, TokenExample> { // The parser restructures the tokens into a tree
+            AnyCount {
+                group {
+                    val token = match<AToken>().getOrElse { return@group } // Example, accessing AToken object from match.
+//                    println(token.content) // Example: Printing the token's content
+                    treeValue = Unit
+                }
+                group {
+                    match<BToken>() // Here, we ignore the token
+                    treeValue = Unit
+                }
+                treeValue = Unit // Prevent deletion on flatten
+            }
+        }
+        val parseResult = klexParser.parse(tokensList).getOrThrow().flattenNullValues()
+        assert(parseResult.size == 2) // 2 pairs of a, b. [[a, b], [a, b]]
+    }
 }

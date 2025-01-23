@@ -3,14 +3,19 @@ package com.mylosoftworks.klex.context
 import com.mylosoftworks.klex.exceptions.NoMatchError
 import com.mylosoftworks.klex.exceptions.NoTokensLeftError
 import com.mylosoftworks.klex.parsing.KlexStringTree
-import com.mylosoftworks.klex.parsing.KlexTree
 import com.mylosoftworks.klex.parsing.RangeParser
 
-class KlexContextString<T>(remainder: String, block: KlexContextString<T>.() -> Unit):
-    AbstractKlexContext<T, String, KlexContextString<T>, KlexStringTree<T>>(remainder, block, {remainder, block -> KlexContextString(remainder, block) }) {
+class KlexContextString<T>(remainder: String, block: KlexContextString<T>.() -> Unit, val startIndex: Int):
+    AbstractKlexContext<T, String, KlexContextString<T>, KlexStringTree<T>>(remainder, block, {remainder, block -> KlexContextString(remainder, block, currentIndex) }) {
+
+    var currentIndex = startIndex
+
+    override fun extraCopy(source: KlexStringTree<T>) {
+        currentIndex = source.sourceEndIndex
+    }
 
     // Content rules
-    fun literal(literal: String): Result<KlexTree<T, String>> {
+    fun literal(literal: String): Result<KlexStringTree<T>> {
         if (error != null) return Result.failure(error!!)
 
         if (!remainder.startsWith(literal)) {
@@ -18,13 +23,15 @@ class KlexContextString<T>(remainder: String, block: KlexContextString<T>.() -> 
             return Result.failure(error!!)
         }
 
-        val treeItem = KlexStringTree<T>(literal, null, listOf())
-        remainder = remainder.substring(literal.length)
+        val length = literal.length
+        val treeItem = KlexStringTree<T>(literal, null, listOf(), currentIndex, currentIndex + length)
+        remainder = remainder.substring(length)
         treeSubItems.add(treeItem)
+        currentIndex += length // Increment the current index by the amount of characters copied
         return Result.success(treeItem)
     }
 
-    fun range(range: String, negate: Boolean = false): Result<KlexTree<T, String>> {
+    fun range(range: String, negate: Boolean = false): Result<KlexStringTree<T>> {
         if (error != null) return Result.failure(error!!)
         if (remainder.isEmpty()) {
             error = NoTokensLeftError("No text left to parse with this range.")
@@ -38,9 +45,10 @@ class KlexContextString<T>(remainder: String, block: KlexContextString<T>.() -> 
             return Result.failure(error!!)
         }
 
-        val treeItem = KlexStringTree<T>(char.toString(), null, listOf())
+        val treeItem = KlexStringTree<T>(char.toString(), null, listOf(), currentIndex, currentIndex + 1)
         remainder = remainder.substring(1)
         treeSubItems.add(treeItem)
+        currentIndex += 1 // Increment the current index by 1
         return Result.success(treeItem)
     }
 
@@ -59,7 +67,9 @@ class KlexContextString<T>(remainder: String, block: KlexContextString<T>.() -> 
             KlexStringTree(
                 treeSubItems.joinToString("") { it.content },
                 treeValue,
-                treeSubItems
+                treeSubItems,
+                startIndex,
+                currentIndex
             ) to remainder)
     }
 }

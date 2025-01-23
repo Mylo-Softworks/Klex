@@ -3,7 +3,7 @@ package json
 import com.mylosoftworks.klex.AnyCount
 import com.mylosoftworks.klex.Klex
 import com.mylosoftworks.klex.Optional
-import com.mylosoftworks.klex.parsing.KlexTree
+import com.mylosoftworks.klex.parsing.AbstractKlexTree
 
 object JsonParser {
     private val klex = Klex.create<JsonElement<*>> {
@@ -121,15 +121,15 @@ object JsonParser {
         return Result.success(klex.parse(string).getOrElse { return Result.failure(it) }.parseShort())
     }
 
-    private fun KlexTree<JsonElement<*>, String>.parseShort(): JsonElement<*> {
+    private fun <Tree: AbstractKlexTree<JsonElement<*>, String, Tree>> Tree.parseShort(): JsonElement<*> {
         return this.flattenNullValues()[0].convert {_, value: JsonElement<*>?, _ -> value!!}
     }
 
-    private fun KlexTree<JsonElement<*>, String>.parseArrayContentShort(): JsonArray {
+    private fun <Tree: AbstractKlexTree<JsonElement<*>, String, Tree>> Tree.parseArrayContentShort(): JsonArray {
         return JsonArray(this.flattenNullValues().map { it.convert {_, value: JsonElement<*>?, _ -> value!!} }.toMutableList())
     }
 
-    private fun KlexTree<JsonElement<*>, String>.parseObjKeyValShort(): JsonObject {
+    private fun <Tree: AbstractKlexTree<JsonElement<*>, String, Tree>> Tree.parseObjKeyValShort(): JsonObject {
         val parsed = (this.flattenNullValues().map { it.convert {_, value: JsonElement<*>?, _ -> value!!} } as List<JsonObjectEntry>).map { it.value }.toTypedArray() // All direct values will be JsonObjectEntry
         return JsonObject(hashMapOf(*parsed))
     }

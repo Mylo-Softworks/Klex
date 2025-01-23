@@ -5,7 +5,7 @@ import com.mylosoftworks.klex.UpTo
 import com.mylosoftworks.klex.exceptions.ManualFailError
 import com.mylosoftworks.klex.exceptions.NoMatchError
 import com.mylosoftworks.klex.exceptions.NotEnoughMatchesError
-import com.mylosoftworks.klex.parsing.KlexTree
+import com.mylosoftworks.klex.parsing.AbstractKlexTree
 import kotlin.jvm.JvmName
 import kotlin.reflect.KProperty
 
@@ -14,7 +14,8 @@ import kotlin.reflect.KProperty
  * @param Source - The source type being parsed (Like string, or an array of tokens)
  * @param Self - A reference to self for properly initializing copies of self.
  */
-abstract class AbstractKlexContext<T, Source, Self: AbstractKlexContext<T, Source, Self, ReturnTreeType>, ReturnTreeType: KlexTree<T, Source>>(var remainder: Source, val block: Self.() -> Unit, val create: (remainder: Source, block: Self.() -> Unit) -> Self) {
+abstract class AbstractKlexContext<T, Source, Self: AbstractKlexContext<T, Source, Self, ReturnTreeType>, ReturnTreeType:
+    AbstractKlexTree<T, Source, ReturnTreeType>>(var remainder: Source, val block: Self.() -> Unit, val create: Self.(remainder: Source, block: Self.() -> Unit) -> Self) {
     /**
      * Result override, used to write errors.
      */
@@ -27,22 +28,27 @@ abstract class AbstractKlexContext<T, Source, Self: AbstractKlexContext<T, Sourc
 
     var treeValue: T? = null
 
+    private val self get() = this as Self
+
     abstract fun parse(): Result<Pair<ReturnTreeType, Source>>
+
+    open fun extraCopy(source: ReturnTreeType) {}
 
     /**
      * Parses all items in this group context.
      *
      * @param propagateError Whether to consider this fail catastrophic or not, effectively acts like a try-catch.
-     * @param mergeUp Merge the [KlexTree] up, in other words, remove the items and
+     * @param mergeUp Merge the [AbstractKlexTree] up, in other words, remove the items and
      */
-    fun group(propagateError: Boolean = true, block: Self.() -> Unit): Result<KlexTree<T, Source>> {
+    fun group(propagateError: Boolean = true, block: Self.() -> Unit): Result<ReturnTreeType> {
         if (error != null) return Result.failure(error!!)
 
-        val (tree, end) = create(remainder, block).parse().getOrElse {
+        val (tree, end) = create(self, remainder, block).parse().getOrElse {
             if (propagateError) error = it // Propagates the error from block to this
             return Result.failure(it) }
         remainder = end
         treeSubItems.add(tree)
+        extraCopy(tree)
         return Result.success(tree)
     }
 
@@ -51,7 +57,7 @@ abstract class AbstractKlexContext<T, Source, Self: AbstractKlexContext<T, Sourc
      *
      * `group(false, block)`
      */
-    fun check(block: Self.() -> Unit): Result<KlexTree<T, Source>> = group(false, block)
+    fun check(block: Self.() -> Unit): Result<ReturnTreeType> = group(false, block)
 
     /**
      * Marks this scope as having failed manually
@@ -63,17 +69,18 @@ abstract class AbstractKlexContext<T, Source, Self: AbstractKlexContext<T, Sourc
     /**
      * Discards all blocks which fail to parse until it finds one which does parse.
      */
-    fun oneOf(vararg blocks: Self.() -> Unit): Result<KlexTree<T, Source>> {
+    fun oneOf(vararg blocks: Self.() -> Unit): Result<ReturnTreeType> {
         if (error != null) return Result.failure(error!!)
 
         // Items are allowed to fail, but if all fail, this item fails.
 
         for (block in blocks) {
-            val result = create(remainder, block).parse()
+            val result = create(self, remainder, block).parse()
             if (result.isFailure) continue // If result couldn't be validated
             val (tree, end) = result.getOrThrow() // Already validated that this result is valid, if it's somehow still a failure, something went seriously wrong, so throw
             remainder = end
             treeSubItems.add(tree)
+            extraCopy(tree)
             return Result.success(tree)
         }
 
@@ -84,7 +91,7 @@ abstract class AbstractKlexContext<T, Source, Self: AbstractKlexContext<T, Sourc
     /**
      * Discards all defined groups which fail to parse until it finds one which does parse.
      */
-    fun <U> oneOf(given: U, vararg groups: KlexPlaceholderVal<T, U, Source, Self>): Result<KlexTree<T, Source>> {
+    fun <U> oneOf(given: U, vararg groups: KlexPlaceholderVal<T, U, Source, Self>): Result<ReturnTreeType> {
         if (error != null) return Result.failure(error!!)
 
         // Items are allowed to fail, but if all fail, this item fails.
@@ -103,21 +110,21 @@ abstract class AbstractKlexContext<T, Source, Self: AbstractKlexContext<T, Sourc
     /**
      * Discards all defined groups which fail to parse until it finds one which does parse.
      */
-    fun oneOf(vararg groups: KlexPlaceholderVal<T, Unit, Source, Self>): Result<KlexTree<T, Source>> = oneOf(Unit, *groups)
+    fun oneOf(vararg groups: KlexPlaceholderVal<T, Unit, Source, Self>): Result<ReturnTreeType> = oneOf(Unit, *groups)
 
-    data class RepeatResult<T, Source>(val count: Int, val subTrees: List<KlexTree<T, Source>>)
+    data class RepeatResult<ReturnTreeType>(val count: Int, val subTrees: List<ReturnTreeType>)
 
     /**
      * Repeat n times, based on [Repeat]
      */
-    fun repeat(times: Repeat, block: Self.() -> Unit): Result<RepeatResult<T, Source>> {
+    fun repeat(times: Repeat, block: Self.() -> Unit): Result<RepeatResult<ReturnTreeType>> {
         if (error != null) return Result.failure(error!!)
 
         var hits = 0 // Hit counter
         val subTrees = mutableListOf<ReturnTreeType>()
         var remaining = remainder
         while (times.max == null || hits < times.max) {
-            val result = create(remaining, block).parse() // Attempt to parse
+            val result = create(self, remaining, block).parse() // Attempt to parse
             if (result.isFailure) break // Failed
             val (tree, end) = result.getOrThrow()
 
@@ -133,6 +140,7 @@ abstract class AbstractKlexContext<T, Source, Self: AbstractKlexContext<T, Sourc
 
         remainder = remaining
         treeSubItems.addAll(subTrees)
+        subTrees.lastOrNull()?.let { extraCopy(it) }
 
         return Result.success(RepeatResult(hits, subTrees))
     }
@@ -164,18 +172,19 @@ abstract class AbstractKlexContext<T, Source, Self: AbstractKlexContext<T, Sourc
     fun <V> define(propagateError: Boolean = true, block: (Self.(V) -> Unit)) =
         KlexPlaceholderVal<T, V, Source, Self>(propagateError, block)
 
-    operator fun KlexPlaceholderVal<T, Unit, Source, Self>.invoke(overridePropagateError: Boolean? = null): Result<Pair<KlexTree<T, Source>, Source>> = this.invoke(Unit, overridePropagateError) // Call regular version
-    operator fun <V> KlexPlaceholderVal<T, V, Source, Self>.invoke(given: V, overridePropagateError: Boolean? = null): Result<Pair<KlexTree<T, Source>, Source>> {
+    operator fun KlexPlaceholderVal<T, Unit, Source, Self>.invoke(overridePropagateError: Boolean? = null): Result<Pair<ReturnTreeType, Source>> = this.invoke(Unit, overridePropagateError) // Call regular version
+    operator fun <V> KlexPlaceholderVal<T, V, Source, Self>.invoke(given: V, overridePropagateError: Boolean? = null): Result<Pair<ReturnTreeType, Source>> {
         if (this@AbstractKlexContext.error != null) return Result.failure(this@AbstractKlexContext.error!!)
 
         val usedPGError = overridePropagateError ?: propagateError
 
-        val (tree, end) = create(remainder) { value(given) }.parse().getOrElse {
+        val (tree, end) = create(self, remainder) { value(given) }.parse().getOrElse {
             if (usedPGError) error = it // Propagates the error from block to this
             return Result.failure(it) }
 
         remainder = end
         treeSubItems.add(tree)
+        extraCopy(tree)
         return Result.success(tree to remainder)
     }
 

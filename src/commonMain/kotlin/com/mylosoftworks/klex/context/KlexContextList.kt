@@ -6,7 +6,7 @@ import com.mylosoftworks.klex.parsing.KlexTree
 import kotlin.reflect.KClass
 
 class KlexContextList<T, Source: Any>(remainder: List<Source>, block: KlexContextList<T, Source>.() -> Unit):
-    AbstractKlexContext<T, List<Source>, KlexContextList<T, Source>, KlexTree<T, List<Source>>>(remainder, block, {remainder, block -> KlexContextList(remainder, block) }) {
+    AbstractKlexContext<T, List<Source>, KlexContextList<T, Source>, KlexTree<T, List<Source>>>(remainder, block, { remainder, block -> KlexContextList(remainder, block) }) {
 
     fun takeNextToken(): Result<Source> {
         if (error != null) return Result.failure(error!!)
@@ -17,9 +17,9 @@ class KlexContextList<T, Source: Any>(remainder: List<Source>, block: KlexContex
         return Result.success(remainder[0])
     }
     /**
-     * Where current token matches predicate
+     * Where current token matches predicate, match
      */
-    fun where(predicate: Source.() -> Boolean): Result<KlexTree<T, List<Source>>> {
+    fun match(predicate: Source.() -> Boolean): Result<Source> {
         if (error != null) return Result.failure(error!!)
         val token = takeNextToken().getOrElse { return Result.failure(it) }
         val match = predicate(token)
@@ -32,18 +32,18 @@ class KlexContextList<T, Source: Any>(remainder: List<Source>, block: KlexContex
         remainder = remainder.drop(1)
         treeSubItems.add(treeItem)
 
-        return Result.success(treeItem)
+        return Result.success(token)
     }
 
     /**
-     * Where current token is class
+     * Where current token is class, match
      */
-    fun <T: Source> where(clazz: KClass<T>) = where { clazz.isInstance(this) }
+    fun <T: Source> match(clazz: KClass<T>) = match { clazz.isInstance(this) } as Result<T>
 
     /**
-     * Where current token is class (Reified generic version)
+     * Where current token is class, match (Reified generic version)
      */
-    inline fun <reified T: Source> where() = where { this is T }
+    inline fun <reified T: Source> match() = match { this is T } as Result<T>
 
     override fun parse(): Result<Pair<KlexTree<T, List<Source>>, List<Source>>> {
         block(this)
