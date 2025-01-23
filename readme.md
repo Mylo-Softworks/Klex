@@ -13,7 +13,7 @@ You can use write definitions by instantiating a Klex object, and writing your d
 import com.mylosoftworks.klex.Klex
 
 fun main() {
-    val parser = Klex<Unit> { // Unit used here, but this can be used for storing information in the tree items for parsing
+    val parser = Klex.create<Unit> { // Unit used here, but this can be used for storing information in the tree items for parsing
         // Definitions go here.
     }
 }

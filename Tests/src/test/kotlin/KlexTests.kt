@@ -9,7 +9,7 @@ import kotlin.test.assertNotNull
 class KlexTests {
     @Test
     fun numberCounter() {
-        val parser = Klex<String> {
+        val parser = Klex.create<String> {
             +"Parse me!"
             AnyCount {
                 oneOf({
@@ -30,7 +30,7 @@ class KlexTests {
 
     @Test
     fun testRange() {
-        val lettersOnly = Klex<Unit> {
+        val lettersOnly = Klex.create<Unit> {
             -"a-zA-Z"
         }
 
@@ -45,7 +45,7 @@ class KlexTests {
 
     @Test
     fun testFallback() {
-        val parser = Klex<String> {
+        val parser = Klex.create<String> {
             AnyCount {
                 group(false) {
                     +"Try matching this"
@@ -67,7 +67,7 @@ class KlexTests {
 
     @Test
     fun testConvert() {
-        val parser = Klex<String> {
+        val parser = Klex.create<String> {
             +"Parse me!"
             AnyCount {
                 oneOf({
@@ -88,7 +88,7 @@ class KlexTests {
 
     @Test
     fun testPlaceholder() {
-        val klex = Klex<Unit> {
+        val klex = Klex.create<Unit> {
             var test by placeholder()
             var test2 by placeholder<String>()
 

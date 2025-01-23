@@ -6,7 +6,7 @@ import com.mylosoftworks.klex.Optional
 import com.mylosoftworks.klex.parsing.KlexTree
 
 object JsonParser {
-    private val klex = Klex<JsonElement<*>> {
+    private val klex = Klex.create<JsonElement<*>> {
         var element by placeholder()
 
         val ws = define {
@@ -28,7 +28,7 @@ object JsonParser {
                         -!"\"" // Anything except for quotes can now be captured, escapes are handled on the previous options
                     })
                 }
-            }.getOrElse { return@define }.strContent // ensures we don't continue if string failed to parse
+            }.getOrElse { return@define }.content // ensures we don't continue if string failed to parse
             treeValue = JsonString(strcontents)
 
             +"\"" // Ends with a quote
@@ -50,14 +50,14 @@ object JsonParser {
                         -"0-9"
                     }
                 }
-            }.getOrElse { return@define }.strContent
+            }.getOrElse { return@define }.content
 
             val parsed = numString.toDoubleOrNull()
             if (parsed == null) fail() // Fail makes the parent not accept this answer, I use it here because I am lazy and don't feel like making the number parser more accurate
             else treeValue = JsonNumber(parsed)
         }
         val bool = define {
-            val boolString = oneOf({+"true"}, {+"false"}).getOrElse { return@define }.strContent
+            val boolString = oneOf({+"true"}, {+"false"}).getOrElse { return@define }.content
             treeValue = JsonBoolean(boolString == "true")
         }
         val nullJson = define {
@@ -121,15 +121,15 @@ object JsonParser {
         return Result.success(klex.parse(string).getOrElse { return Result.failure(it) }.parseShort())
     }
 
-    private fun KlexTree<JsonElement<*>>.parseShort(): JsonElement<*> {
+    private fun KlexTree<JsonElement<*>, String>.parseShort(): JsonElement<*> {
         return this.flattenNullValues()[0].convert {_, value: JsonElement<*>?, _ -> value!!}
     }
 
-    private fun KlexTree<JsonElement<*>>.parseArrayContentShort(): JsonArray {
+    private fun KlexTree<JsonElement<*>, String>.parseArrayContentShort(): JsonArray {
         return JsonArray(this.flattenNullValues().map { it.convert {_, value: JsonElement<*>?, _ -> value!!} }.toMutableList())
     }
 
-    private fun KlexTree<JsonElement<*>>.parseObjKeyValShort(): JsonObject {
+    private fun KlexTree<JsonElement<*>, String>.parseObjKeyValShort(): JsonObject {
         val parsed = (this.flattenNullValues().map { it.convert {_, value: JsonElement<*>?, _ -> value!!} } as List<JsonObjectEntry>).map { it.value }.toTypedArray() // All direct values will be JsonObjectEntry
         return JsonObject(hashMapOf(*parsed))
     }
