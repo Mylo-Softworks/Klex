@@ -53,7 +53,10 @@ object JsonParser {
             }.getOrElse { return@define }.content
 
             val parsed = numString.toDoubleOrNull()
-            if (parsed == null) fail() // Fail makes the parent not accept this answer, I use it here because I am lazy and don't feel like making the number parser more accurate
+
+            // Fail makes the parent not accept this answer, I use it here because I am lazy and don't feel like making the number parser more accurate
+            // You can simply do `return@define fail()` to not run the code below, this is redundant in this example though.
+            if (parsed == null) return@define fail()
             else treeValue = JsonNumber(parsed)
         }
         val bool = define {

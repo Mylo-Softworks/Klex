@@ -60,7 +60,9 @@ abstract class AbstractKlexContext<T, Source, Self: AbstractKlexContext<T, Sourc
     fun check(block: Self.() -> Unit): Result<ReturnTreeType> = group(false, block)
 
     /**
-     * Marks this scope as having failed manually
+     * Marks this scope as having failed manually. Use `return@name fail()` to also stop execution for this scope.
+     * @param message The message to fail with.
+     * @return [Unit]
      */
     fun fail(message: String? = null) {
         error = ManualFailError(message)
