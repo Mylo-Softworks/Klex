@@ -28,6 +28,7 @@ abstract class AbstractKlexContext<T, Source, Self: AbstractKlexContext<T, Sourc
 
     var treeValue: T? = null
 
+    @Suppress("unchecked_cast")
     private val self get() = this as Self
 
     abstract fun parse(): Result<Pair<ReturnTreeType, Source>>
@@ -38,7 +39,6 @@ abstract class AbstractKlexContext<T, Source, Self: AbstractKlexContext<T, Sourc
      * Parses all items in this group context.
      *
      * @param propagateError Whether to consider this fail catastrophic or not, effectively acts like a try-catch.
-     * @param mergeUp Merge the [AbstractKlexTree] up, in other words, remove the items and
      */
     fun group(propagateError: Boolean = true, block: Self.() -> Unit): Result<ReturnTreeType> {
         if (error != null) return Result.failure(error!!)
@@ -99,7 +99,7 @@ abstract class AbstractKlexContext<T, Source, Self: AbstractKlexContext<T, Sourc
         for (group in groups) {
             val result = group(given, false) // Run the group and override propagateError to false
             if (result.isFailure) continue
-            val (tree, end) = result.getOrThrow() // Already validated that this result is valid, if it's somehow still a failure, something went seriously wrong, so throw
+            val (tree, _) = result.getOrThrow() // Already validated that this result is valid, if it's somehow still a failure, something went seriously wrong, so throw
             return Result.success(tree)
         }
 

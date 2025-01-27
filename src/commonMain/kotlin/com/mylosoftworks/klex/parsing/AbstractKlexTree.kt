@@ -8,6 +8,7 @@ package com.mylosoftworks.klex.parsing
 abstract class AbstractKlexTree<T, Type, Self: AbstractKlexTree<T, Type, Self>>(val content: Type, val value: T?, var children: List<Self>) {
     abstract fun copyWithNewChildren(newChildren: List<Self>): Self
 
+    @Suppress("unchecked_cast")
     val self get() = this as Self
 
     /**
@@ -70,8 +71,8 @@ abstract class AbstractKlexTree<T, Type, Self: AbstractKlexTree<T, Type, Self>>(
         return getIndexOfDescendantPrivate(item).first
     }
 
-    private fun getIndexOfDescendantPrivate(item: Self, index: Int = -1): Triple<Int, Boolean, Boolean> {
-        var index = index
+    private fun getIndexOfDescendantPrivate(item: Self, startIndex: Int = -1): Triple<Int, Boolean, Boolean> {
+        var index = startIndex
         children.forEach {
             val (newIndex, increment, hit) = it.getIndexOfDescendantPrivate(item, index)
             index = newIndex

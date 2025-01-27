@@ -31,7 +31,13 @@ class Klex<T, Source, KlexContext: AbstractKlexContext<T, Source, KlexContext, R
          * Create a Klex context for parsing strings.
          * @param T The type of tree item to output to.
          */
-        fun <T> create(block: KlexContextString<T>.() -> Unit): Klex<T, String, KlexContextString<T>, KlexStringTree<T>> = Klex(block, {remainder, block -> KlexContextString(remainder, block, 0) })
+        fun <T> create(block: KlexContextString<T>.() -> Unit): Klex<T, String, KlexContextString<T>, KlexStringTree<T>> = Klex(block) { remainder, innerBlock ->
+            KlexContextString(
+                remainder,
+                innerBlock,
+                0
+            )
+        }
 
         /**
          * Create a Klex context for parsing tokens of type [Source].
@@ -40,6 +46,11 @@ class Klex<T, Source, KlexContext: AbstractKlexContext<T, Source, KlexContext, R
          */
         @JvmName("createSource")
         @JsName("createSource")
-        fun <T, Source : Any> create(block: KlexContextList<T, Source>.() -> Unit): Klex<T, List<Source>, KlexContextList<T, Source>, KlexTree<T, List<Source>>> = Klex(block, { remainder, block -> KlexContextList(remainder, block) })
+        fun <T, Source : Any> create(block: KlexContextList<T, Source>.() -> Unit): Klex<T, List<Source>, KlexContextList<T, Source>, KlexTree<T, List<Source>>> = Klex(block) { remainder, innerBlock ->
+            KlexContextList(
+                remainder,
+                innerBlock
+            )
+        }
     }
 }

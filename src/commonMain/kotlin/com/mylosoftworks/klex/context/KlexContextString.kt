@@ -6,7 +6,7 @@ import com.mylosoftworks.klex.parsing.KlexStringTree
 import com.mylosoftworks.klex.parsing.RangeParser
 
 class KlexContextString<T>(remainder: String, block: KlexContextString<T>.() -> Unit, val startIndex: Int):
-    AbstractKlexContext<T, String, KlexContextString<T>, KlexStringTree<T>>(remainder, block, {remainder, block -> KlexContextString(remainder, block, currentIndex) }) {
+    AbstractKlexContext<T, String, KlexContextString<T>, KlexStringTree<T>>(remainder, block, {newRemainder, newBlock -> KlexContextString(newRemainder, newBlock, currentIndex) }) {
 
     var currentIndex = startIndex
 

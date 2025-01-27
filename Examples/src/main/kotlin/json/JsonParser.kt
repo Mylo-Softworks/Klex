@@ -129,6 +129,7 @@ object JsonParser {
         return JsonArray(this.flattenNullValues().map { it.convert {_, value: JsonElement<*>?, _ -> value!!} }.toMutableList())
     }
 
+    @Suppress("unchecked_cast")
     private fun <Tree: AbstractKlexTree<JsonElement<*>, String, Tree>> Tree.parseObjKeyValShort(): JsonObject {
         val parsed = (this.flattenNullValues().map { it.convert {_, value: JsonElement<*>?, _ -> value!!} } as List<JsonObjectEntry>).map { it.value }.toTypedArray() // All direct values will be JsonObjectEntry
         return JsonObject(hashMapOf(*parsed))
