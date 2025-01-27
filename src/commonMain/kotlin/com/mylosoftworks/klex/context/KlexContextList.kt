@@ -45,6 +45,9 @@ class KlexContextList<T, Source: Any>(remainder: List<Source>, block: KlexContex
      */
     inline fun <reified T: Source> match() = match { this is T } as Result<T>
 
+    inline fun <reified T2: Source> funType(): KlexContextList<T, Source>.() -> Result<T2> = { match<T2>() }
+    fun funCond(predicate: Source.() -> Boolean): KlexContextList<T, Source>.() -> Result<Source> = { match(predicate) }
+
     override fun parse(): Result<Pair<KlexTree<T, List<Source>>, List<Source>>> {
         block(this)
         if (error != null) return Result.failure(error!!)

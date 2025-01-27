@@ -181,6 +181,27 @@ class KlexTests {
             }
         }
         val parseResult = klexParser.parse(tokensList).getOrThrow().flattenNullValues()
-        assert(parseResult.size == 2) // 2 pairs of a, b. [[a, b], [a, b]]
+        assertEquals(2, parseResult.size) // 2 pairs of a, b. [[a, b], [a, b]]
+    }
+
+    @Test
+    fun testListFuns() {
+        val klexParser = Klex.create<Unit, String> { // Unit return type, String tokens (not to be confused with the raw lexer)
+            val token1 = funCond { this == "1" } // "this" is the next captured token, in this case a string
+            val other = funType<String>() // By selecting string, it'll always capture in this context (list<String>)
+            AnyCount {
+                oneOf({
+                    token1()
+
+                    treeValue = Unit // Make non-null, so this tree item won't be removed for the assert.
+                }, {
+                    other() // Fallback, capture anyways
+                })
+                println(remainder)
+            }
+            treeValue = Unit // To ensure the root is set, so flattenNullValues will give an array that's always 1 in size.
+        }
+        val parseResult = klexParser.parse("1:2:1:4:1".split(":")).getOrThrow().flattenNullValues()[0]
+        assertEquals(3, parseResult.findAll { it.content[0] == "1" }.size) // content[0] is used to get the raw input value, in this example trees don't contain other trees
     }
 }
