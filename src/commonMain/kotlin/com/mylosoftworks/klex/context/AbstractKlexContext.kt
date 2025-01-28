@@ -109,6 +109,23 @@ abstract class AbstractKlexContext<T, Source, Self: AbstractKlexContext<T, Sourc
         return Result.failure(error!!)
     }
 
+    fun <R> oneOfR(vararg groups: Self.() -> R?): Result<R> {
+        if (error != null) return Result.failure(error!!)
+
+        for (group in groups) {
+            var returnValue: R? = null
+            group(false) {
+                val result = group()
+                if (error != null && result != null) return@group
+                returnValue = result
+            }
+            if (returnValue != null) return Result.success(returnValue!!)
+        }
+
+        error = NoMatchError("Could not find a match.")
+        return Result.failure(error!!)
+    }
+
     /**
      * Discards all defined groups which fail to parse until it finds one which does parse.
      */
@@ -167,12 +184,14 @@ abstract class AbstractKlexContext<T, Source, Self: AbstractKlexContext<T, Sourc
     fun placeholder() = KlexPlaceholder<T, Unit, Source, Self>()
     @JvmName("placeholderV")
     fun <V> placeholder() = KlexPlaceholder<T, V, Source, Self>()
+    fun <R> placeholderR(): Self.() -> R? = {null}
 
     fun define(propagateError: Boolean = true, block: (Self.(Unit) -> Unit)) =
         KlexPlaceholderVal<T, Unit, Source, Self>(propagateError, block)
     @JvmName("defineV")
     fun <V> define(propagateError: Boolean = true, block: (Self.(V) -> Unit)) =
         KlexPlaceholderVal<T, V, Source, Self>(propagateError, block)
+    fun <R> defineR(block: Self.() -> R) = block
 
     operator fun KlexPlaceholderVal<T, Unit, Source, Self>.invoke(overridePropagateError: Boolean? = null): Result<Pair<ReturnTreeType, Source>> = this.invoke(Unit, overridePropagateError) // Call regular version
     operator fun <V> KlexPlaceholderVal<T, V, Source, Self>.invoke(given: V, overridePropagateError: Boolean? = null): Result<Pair<ReturnTreeType, Source>> {
