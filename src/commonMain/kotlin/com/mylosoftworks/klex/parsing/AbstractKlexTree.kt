@@ -97,4 +97,9 @@ abstract class AbstractKlexTree<T, Type, Self: AbstractKlexTree<T, Type, Self>>(
     operator fun component8() = get(7)
     operator fun component9() = get(8)
     operator fun component10() = get(9)
+
+    // Utility functions for some usage styles
+
+    // Live tree-building
+    fun firstFlatValue(): T? = flattenNullValues().getOrNull(0)?.value
 }
